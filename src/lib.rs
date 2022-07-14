@@ -138,3 +138,28 @@ pub fn default_bounded(items: TokenStream) -> TokenStream {
 
     common_bounded(items, body, field, bound)
 }
+
+#[proc_macro_derive(Clone, attributes(bounded_to))]
+pub fn clone_bounded(items: TokenStream) -> TokenStream {
+    let body = |name: &Ident, generics: Generics, inner| -> TokenStream2 {
+        let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+        quote! {
+            impl #impl_generics std::clone::Clone for #name #ty_generics #where_clause {
+                fn clone(&self) -> Self {
+                    Self {
+                        #inner
+                    }
+                }
+            }
+        }
+    };
+
+    let field = |field: &Ident| -> TokenStream2 {
+        quote! { #field: self.#field.clone(), }
+    };
+
+    let bound = quote! { Clone };
+
+    common_bounded(items, body, field, bound)
+}
