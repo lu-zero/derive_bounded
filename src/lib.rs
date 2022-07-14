@@ -6,14 +6,14 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::punctuated::Punctuated;
 use syn::token::Comma;
-use syn::{parse_macro_input, parse_quote, DeriveInput, Generics, PredicateType, TypePath};
+use syn::{parse_macro_input, parse_quote, DeriveInput, Generics, Ident, PredicateType, TypePath};
 
 use darling::usage::{CollectTypeParams, GenericsExt, IdentRefSet, Purpose};
 use darling::FromDeriveInput;
 
 #[derive(Debug, FromDeriveInput)]
 #[darling(attributes(bounded_to))]
-struct MyDefault {
+struct BoundedDerive {
     ident: syn::Ident,
     generics: syn::Generics,
     data: darling::ast::Data<syn::Variant, syn::Field>,
@@ -24,7 +24,11 @@ fn root_idents(types: &Punctuated<syn::Path, Comma>) -> IdentRefSet {
     types.iter().map(|path| &path.segments[0].ident).collect()
 }
 
-fn normalize_generics<'a>(generics: &mut Generics, types: impl Iterator<Item = &'a syn::Path>) {
+fn normalize_generics<'a>(
+    bound: TokenStream2,
+    generics: &mut Generics,
+    types: impl Iterator<Item = &'a syn::Path>,
+) {
     let bounds = generics
         .type_params_mut()
         .filter_map(|par| {
@@ -50,16 +54,20 @@ fn normalize_generics<'a>(generics: &mut Generics, types: impl Iterator<Item = &
     }
 
     for ty in types {
-        let pred: syn::WherePredicate = parse_quote! { #ty: Default };
+        let pred: syn::WherePredicate = parse_quote! { #ty: #bound };
 
         where_clause.predicates.push(pred.into());
     }
 }
 
-#[proc_macro_derive(Default, attributes(bounded_to))]
-pub fn default_bounded(items: TokenStream) -> TokenStream {
+fn common_bounded(
+    items: TokenStream,
+    body: fn(name: &Ident, generics: Generics, inner: TokenStream2) -> TokenStream2,
+    field: fn(field: &Ident) -> TokenStream2,
+    bound: TokenStream2,
+) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(items);
-    let default = match MyDefault::from_derive_input(&input) {
+    let default = match BoundedDerive::from_derive_input(&input) {
         Ok(val) => val,
         Err(err) => {
             return err.write_errors().into();
@@ -69,7 +77,7 @@ pub fn default_bounded(items: TokenStream) -> TokenStream {
     let type_params = default.generics.declared_type_params();
     let mut generics = default.generics.clone();
 
-    let body = match default.data {
+    let inner = match default.data {
         darling::ast::Data::Struct(ref fields) => {
             let type_params_in_body = fields
                 .iter()
@@ -80,12 +88,21 @@ pub fn default_bounded(items: TokenStream) -> TokenStream {
                 .map(|&ident| syn::Path::from(ident.clone()))
                 .collect::<Vec<_>>();
 
-            normalize_generics(&mut generics, default.types.iter().chain(leftovers.iter()));
+            normalize_generics(
+                bound,
+                &mut generics,
+                default.types.iter().chain(leftovers.iter()),
+            );
             match fields.style {
-                Style::Struct => TokenStream2::from_iter(fields.fields.iter().map(|field| {
-                    let field = &field.ident;
-                    quote! { #field: Default::default(), }
-                })),
+                Style::Struct => {
+                    // SAFETY: Struct style struct has always fields
+                    TokenStream2::from_iter(
+                        fields
+                            .fields
+                            .iter()
+                            .map(|f| field(f.ident.as_ref().unwrap())),
+                    )
+                }
                 _ => todo!(),
             }
         }
@@ -94,18 +111,30 @@ pub fn default_bounded(items: TokenStream) -> TokenStream {
         }
     };
 
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-    let name = default.ident;
+    body(&default.ident, generics, inner).into()
+}
 
-    let out = quote! {
-        impl #impl_generics std::default::Default for #name #ty_generics #where_clause {
-            fn default() -> Self {
-                Self {
-                    #body
+#[proc_macro_derive(Default, attributes(bounded_to))]
+pub fn default_bounded(items: TokenStream) -> TokenStream {
+    let body = |name: &Ident, generics: Generics, inner| -> TokenStream2 {
+        let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+        quote! {
+            impl #impl_generics std::default::Default for #name #ty_generics #where_clause {
+                fn default() -> Self {
+                    Self {
+                        #inner
+                    }
                 }
             }
         }
     };
 
-    out.into()
+    let field = |field: &Ident| -> TokenStream2 {
+        quote! { #field: Default::default(), }
+    };
+
+    let bound = quote! { Default };
+
+    common_bounded(items, body, field, bound)
 }
