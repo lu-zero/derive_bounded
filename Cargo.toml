@@ -1,0 +1,23 @@
+[package]
+name = "derive_bounded"
+version = "0.1.0"
+edition = "2021"
+description = "Builtin-macros workalike but with a way to specify bounds"
+license = "MIT"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+darling = "0.14.1"
+proc-macro2 = "1.0.1"
+quote = "1.0.0"
+
+[dependencies.syn]
+features = [
+    # "extra-traits", # Only for debugging
+    "full",
+    "parsing",
+    "printing",
+]
+version = "1.0.3"
