@@ -11,7 +11,7 @@ use syn::{parse_macro_input, parse_quote, DeriveInput, Generics, Ident, Predicat
 use darling::usage::{CollectTypeParams, GenericsExt, IdentRefSet, Purpose};
 use darling::FromDeriveInput;
 
-#[derive(Debug, FromDeriveInput)]
+#[derive(std::fmt::Debug, FromDeriveInput)]
 #[darling(attributes(bounded_to))]
 struct BoundedDerive {
     ident: syn::Ident,
@@ -160,6 +160,33 @@ pub fn clone_bounded(items: TokenStream) -> TokenStream {
     };
 
     let bound = quote! { Clone };
+
+    common_bounded(items, body, field, bound)
+}
+
+#[proc_macro_derive(Debug, attributes(bounded_to))]
+pub fn debug_bounded(items: TokenStream) -> TokenStream {
+    let body = |name: &Ident, generics: Generics, inner| -> TokenStream2 {
+        let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+        let s = name.to_string();
+        quote! {
+            impl #impl_generics std::fmt::Debug for #name #ty_generics #where_clause {
+                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                    f.debug_struct(#s)
+                    #inner
+                    .finish()
+                }
+            }
+        }
+    };
+
+    let field = |field: &Ident| -> TokenStream2 {
+        let s = field.to_string();
+        quote! { .field(#s, &self.#field) }
+    };
+
+    let bound = quote! { std::fmt::Debug };
 
     common_bounded(items, body, field, bound)
 }
