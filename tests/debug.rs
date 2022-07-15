@@ -16,27 +16,27 @@ impl Associate for Holder {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-#[bounded_to(types = "T::B, T::C")]
+#[bounded_to(types(T::B, T::C))]
 struct A<T: Associate> {
     a: T::A,
     b: B<T>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-#[bounded_to(types = "T::C")]
+#[bounded_to(types(T::C))]
 struct B<T: Associate> {
     b: T::B,
     c: C<T>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-#[bounded_to(types = "T::C")]
+#[bounded_to(types(T::C))]
 struct C<T: Associate> {
     c: T::C,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-#[bounded_to(types = "T::C")]
+#[bounded_to(types(T::C))]
 struct C2<T, V, Blah: Default>
 where
     T: Associate,

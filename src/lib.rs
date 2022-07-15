@@ -11,13 +11,13 @@
 //! }
 //!
 //! #[derive(Clone)]
-//! #[bounded_to(types="T::B")]
+//! #[bounded_to(types(T::B))]
 //! struct A<T: Trait> {
 //!     f: T::B,
 //! }
 //!
 //! #[derive(Clone)]
-//! #[bounded_to(types="T::B")]
+//! #[bounded_to(types(T::B))]
 //! struct B<T: Trait> {
 //!     f: A<T>,
 //! }
@@ -40,8 +40,6 @@ use darling::ast::Style;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use syn::punctuated::Punctuated;
-use syn::token::Comma;
 use syn::{parse_macro_input, parse_quote, DeriveInput, Generics, Ident, PredicateType, TypePath};
 
 use darling::usage::{CollectTypeParams, GenericsExt, IdentRefSet, Purpose};
@@ -53,10 +51,10 @@ struct BoundedDerive {
     ident: syn::Ident,
     generics: syn::Generics,
     data: darling::ast::Data<syn::Variant, syn::Field>,
-    types: Punctuated<syn::Path, Comma>,
+    types: darling::util::PathList,
 }
 
-fn root_idents(types: &Punctuated<syn::Path, Comma>) -> IdentRefSet {
+fn root_idents(types: &[syn::Path]) -> IdentRefSet {
     types.iter().map(|path| &path.segments[0].ident).collect()
 }
 
@@ -152,7 +150,7 @@ fn common_bounded(
 
 /// Derive [Default][std::default::Default]
 ///
-/// Use the attribute `#[bounded_to(types = "T, A::B")] to to specify more precise bounds.
+/// Use the attribute `#[bounded_to(types(T, A::B))] to to specify more precise bounds.
 #[proc_macro_derive(Default, attributes(bounded_to))]
 pub fn default_bounded(items: TokenStream) -> TokenStream {
     let body = |name: &Ident, generics: Generics, inner| -> TokenStream2 {
@@ -180,7 +178,7 @@ pub fn default_bounded(items: TokenStream) -> TokenStream {
 
 /// Derive [Clone][std::clone::Clone]
 ///
-/// Use the attribute `#[bounded_to(types = "T, A::B")] to to specify more precise bounds.
+/// Use the attribute `#[bounded_to(types(T, A::B))] to to specify more precise bounds.
 #[proc_macro_derive(Clone, attributes(bounded_to))]
 pub fn clone_bounded(items: TokenStream) -> TokenStream {
     let body = |name: &Ident, generics: Generics, inner| -> TokenStream2 {
@@ -208,7 +206,7 @@ pub fn clone_bounded(items: TokenStream) -> TokenStream {
 
 /// Derive [Debug][std::fmt::Debug]
 ///
-/// Use the attribute `#[bounded_to(types = "T, A::B")] to to specify more precise bounds.
+/// Use the attribute `#[bounded_to(types(T, A::B))] to to specify more precise bounds.
 #[proc_macro_derive(Debug, attributes(bounded_to))]
 pub fn debug_bounded(items: TokenStream) -> TokenStream {
     let body = |name: &Ident, generics: Generics, inner| -> TokenStream2 {
@@ -238,7 +236,7 @@ pub fn debug_bounded(items: TokenStream) -> TokenStream {
 
 /// Derive [PartialEq][std::cmp::PartialEq]
 ///
-/// Use the attribute `#[bounded_to(types = "T, A::B")] to to specify more precise bounds.
+/// Use the attribute `#[bounded_to(types(T, A::B))] to to specify more precise bounds.
 #[proc_macro_derive(PartialEq, attributes(bounded_to))]
 pub fn partial_eq_bounded(items: TokenStream) -> TokenStream {
     let body = |name: &Ident, generics: Generics, inner| -> TokenStream2 {
