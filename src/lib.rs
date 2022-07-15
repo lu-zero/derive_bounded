@@ -1,3 +1,39 @@
+//! Collection of derive macros with explicitable bounds
+//!
+//! They derive the matching trait but have an optional `bounded_to` attribute to override the
+//! bounds.
+//!
+//! ```
+//! use derive_bounded::Clone;
+//!
+//! trait Trait {
+//!     type B: Clone;
+//! }
+//!
+//! #[derive(Clone)]
+//! #[bounded_to(types="T::B")]
+//! struct A<T: Trait> {
+//!     f: T::B,
+//! }
+//!
+//! #[derive(Clone)]
+//! #[bounded_to(types="T::B")]
+//! struct B<T: Trait> {
+//!     f: A<T>,
+//! }
+//! ```
+//!
+//! The auto-generated impl for [Clone][std::clone::Clone] will have a where clause with `T::B: Clone` instead of `T: Clone`.
+//!
+//! As this version there are few known limitations:
+//!
+//! - The macro works only with Struct-style Structs
+//! - The macro does not auto-generate the where clause for associated traits (e.g. `A` in the
+//! example needs the `bounded_to` attribute
+//!
+//! Later versions will address those.
+//!
+
 use std::ops::Not;
 
 use darling::ast::Style;
@@ -114,6 +150,9 @@ fn common_bounded(
     body(&default.ident, generics, inner).into()
 }
 
+/// Derive [Default][std::default::Default]
+///
+/// Use the attribute `#[bounded_to(types = "T, A::B")] to to specify more precise bounds.
 #[proc_macro_derive(Default, attributes(bounded_to))]
 pub fn default_bounded(items: TokenStream) -> TokenStream {
     let body = |name: &Ident, generics: Generics, inner| -> TokenStream2 {
@@ -139,6 +178,9 @@ pub fn default_bounded(items: TokenStream) -> TokenStream {
     common_bounded(items, body, field, bound)
 }
 
+/// Derive [Clone][std::clone::Clone]
+///
+/// Use the attribute `#[bounded_to(types = "T, A::B")] to to specify more precise bounds.
 #[proc_macro_derive(Clone, attributes(bounded_to))]
 pub fn clone_bounded(items: TokenStream) -> TokenStream {
     let body = |name: &Ident, generics: Generics, inner| -> TokenStream2 {
@@ -164,6 +206,9 @@ pub fn clone_bounded(items: TokenStream) -> TokenStream {
     common_bounded(items, body, field, bound)
 }
 
+/// Derive [Debug][std::fmt::Debug]
+///
+/// Use the attribute `#[bounded_to(types = "T, A::B")] to to specify more precise bounds.
 #[proc_macro_derive(Debug, attributes(bounded_to))]
 pub fn debug_bounded(items: TokenStream) -> TokenStream {
     let body = |name: &Ident, generics: Generics, inner| -> TokenStream2 {
@@ -191,6 +236,9 @@ pub fn debug_bounded(items: TokenStream) -> TokenStream {
     common_bounded(items, body, field, bound)
 }
 
+/// Derive [PartialEq][std::cmp::PartialEq]
+///
+/// Use the attribute `#[bounded_to(types = "T, A::B")] to to specify more precise bounds.
 #[proc_macro_derive(PartialEq, attributes(bounded_to))]
 pub fn partial_eq_bounded(items: TokenStream) -> TokenStream {
     let body = |name: &Ident, generics: Generics, inner| -> TokenStream2 {
