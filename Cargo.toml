@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Builtin-macros workalike but with a way to specify bounds"
 license = "MIT"
+repository = "https://github.com/lu-zero/derive_bounded"
 
 [lib]
 proc-macro = true
