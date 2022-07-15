@@ -11,13 +11,13 @@
 //! }
 //!
 //! #[derive(Clone)]
-//! #[bounded_to(types(T::B))]
+//! #[bounded_to(T::B)]
 //! struct A<T: Trait> {
 //!     f: T::B,
 //! }
 //!
 //! #[derive(Clone)]
-//! #[bounded_to(types(T::B))]
+//! #[bounded_to(T::B)]
 //! struct B<T: Trait> {
 //!     f: A<T>,
 //! }
@@ -38,20 +38,23 @@ use std::ops::Not;
 
 use darling::ast::Style;
 use proc_macro::TokenStream;
-use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::{TokenStream as TokenStream2, TokenTree};
 use quote::quote;
+use syn::punctuated::Punctuated;
+use syn::token::Comma;
 use syn::{parse_macro_input, parse_quote, DeriveInput, Generics, Ident, PredicateType, TypePath};
 
 use darling::usage::{CollectTypeParams, GenericsExt, IdentRefSet, Purpose};
 use darling::FromDeriveInput;
 
 #[derive(std::fmt::Debug, FromDeriveInput)]
-#[darling(attributes(bounded_to))]
+#[darling(forward_attrs(bounded_to))]
 struct BoundedDerive {
     ident: syn::Ident,
     generics: syn::Generics,
     data: darling::ast::Data<syn::Variant, syn::Field>,
-    types: darling::util::PathList,
+    attrs: Vec<syn::Attribute>,
+    //types: BoundedTypes,
 }
 
 fn root_idents(types: &[syn::Path]) -> IdentRefSet {
@@ -111,6 +114,25 @@ fn common_bounded(
     let type_params = default.generics.declared_type_params();
     let mut generics = default.generics.clone();
 
+    let mut types = Vec::new();
+    for attr in default.attrs.iter() {
+        for token in attr.tokens.clone() {
+            if let TokenTree::Group(ref g) = token {
+                use syn::parse::Parser;
+                let parser = Punctuated::<syn::Path, Comma>::parse_terminated;
+
+                match parser.parse2(g.stream()) {
+                    Ok(l) => types.extend(l.into_iter()),
+                    Err(err) => return err.to_compile_error().into(),
+                }
+            } else {
+                return darling::Error::unsupported_format("expected bounded_to(...)")
+                    .write_errors()
+                    .into();
+            }
+        }
+    }
+
     let inner = match default.data {
         darling::ast::Data::Struct(ref fields) => {
             let type_params_in_body = fields
@@ -118,15 +140,12 @@ fn common_bounded(
                 .collect_type_params(&Purpose::BoundImpl.into(), &type_params);
 
             let leftovers = type_params_in_body
-                .difference(&root_idents(&default.types))
+                .difference(&root_idents(&types))
                 .map(|&ident| syn::Path::from(ident.clone()))
                 .collect::<Vec<_>>();
 
-            normalize_generics(
-                bound,
-                &mut generics,
-                default.types.iter().chain(leftovers.iter()),
-            );
+            normalize_generics(bound, &mut generics, types.iter().chain(leftovers.iter()));
+
             match fields.style {
                 Style::Struct => {
                     // SAFETY: Struct style struct has always fields
@@ -150,7 +169,7 @@ fn common_bounded(
 
 /// Derive [Default][std::default::Default]
 ///
-/// Use the attribute `#[bounded_to(types(T, A::B))] to to specify more precise bounds.
+/// Use the attribute `#[bounded_to(T, A::B)] to to specify more precise bounds.
 #[proc_macro_derive(Default, attributes(bounded_to))]
 pub fn default_bounded(items: TokenStream) -> TokenStream {
     let body = |name: &Ident, generics: Generics, inner| -> TokenStream2 {
@@ -178,7 +197,7 @@ pub fn default_bounded(items: TokenStream) -> TokenStream {
 
 /// Derive [Clone][std::clone::Clone]
 ///
-/// Use the attribute `#[bounded_to(types(T, A::B))] to to specify more precise bounds.
+/// Use the attribute `#[bounded_to(T, A::B)] to to specify more precise bounds.
 #[proc_macro_derive(Clone, attributes(bounded_to))]
 pub fn clone_bounded(items: TokenStream) -> TokenStream {
     let body = |name: &Ident, generics: Generics, inner| -> TokenStream2 {
@@ -206,7 +225,7 @@ pub fn clone_bounded(items: TokenStream) -> TokenStream {
 
 /// Derive [Debug][std::fmt::Debug]
 ///
-/// Use the attribute `#[bounded_to(types(T, A::B))] to to specify more precise bounds.
+/// Use the attribute `#[bounded_to(T, A::B)] to to specify more precise bounds.
 #[proc_macro_derive(Debug, attributes(bounded_to))]
 pub fn debug_bounded(items: TokenStream) -> TokenStream {
     let body = |name: &Ident, generics: Generics, inner| -> TokenStream2 {
@@ -236,7 +255,7 @@ pub fn debug_bounded(items: TokenStream) -> TokenStream {
 
 /// Derive [PartialEq][std::cmp::PartialEq]
 ///
-/// Use the attribute `#[bounded_to(types(T, A::B))] to to specify more precise bounds.
+/// Use the attribute `#[bounded_to(T, A::B)] to to specify more precise bounds.
 #[proc_macro_derive(PartialEq, attributes(bounded_to))]
 pub fn partial_eq_bounded(items: TokenStream) -> TokenStream {
     let body = |name: &Ident, generics: Generics, inner| -> TokenStream2 {
