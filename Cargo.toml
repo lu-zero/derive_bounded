@@ -1,6 +1,6 @@
 [package]
 name = "derive_bounded"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Builtin-macros workalike but with a way to specify bounds"
 license = "MIT"
