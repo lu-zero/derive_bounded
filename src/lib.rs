@@ -44,7 +44,7 @@ use syn::punctuated::Punctuated;
 use syn::token::Comma;
 use syn::{parse_macro_input, parse_quote, DeriveInput, Generics, Ident, PredicateType, TypePath};
 
-use darling::usage::{CollectTypeParams, GenericsExt, IdentRefSet, Purpose};
+use darling::usage::{CollectTypeParams, GenericsExt, Purpose};
 use darling::FromDeriveInput;
 
 #[derive(std::fmt::Debug, FromDeriveInput)]
@@ -57,14 +57,10 @@ struct BoundedDerive {
     //types: BoundedTypes,
 }
 
-fn root_idents(types: &[syn::Path]) -> IdentRefSet {
-    types.iter().map(|path| &path.segments[0].ident).collect()
-}
-
 fn normalize_generics<'a>(
     bound: TokenStream2,
     generics: &mut Generics,
-    types: impl Iterator<Item = &'a syn::Path>,
+    types: impl Iterator<Item = &'a syn::Type>,
 ) {
     let bounds = generics
         .type_params_mut()
@@ -123,7 +119,7 @@ fn common_bounded(
         for token in attr.tokens.clone() {
             if let TokenTree::Group(ref g) = token {
                 use syn::parse::Parser;
-                let parser = Punctuated::<syn::Path, Comma>::parse_terminated;
+                let parser = Punctuated::<syn::Type, Comma>::parse_terminated;
 
                 match parser.parse2(g.stream()) {
                     Ok(l) => types.extend(l.into_iter()),
@@ -143,9 +139,16 @@ fn common_bounded(
                 .iter()
                 .collect_type_params(&Purpose::BoundImpl.into(), &type_params);
 
+            let type_params_in_attrs =
+                types.collect_type_params(&Purpose::BoundImpl.into(), &type_params);
+
             let leftovers = type_params_in_body
-                .difference(&root_idents(&types))
-                .map(|&ident| syn::Path::from(ident.clone()))
+                .difference(&type_params_in_attrs)
+                .map(|&ident| {
+                    let path = syn::Path::from(ident.clone());
+                    let path = TypePath { qself: None, path };
+                    syn::Type::from(path)
+                })
                 .collect::<Vec<_>>();
 
             normalize_generics(bound, &mut generics, types.iter().chain(leftovers.iter()));

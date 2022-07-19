@@ -4,6 +4,7 @@ trait Associate {
     type A: PartialEq + Clone;
     type B: PartialEq + Clone;
     type C: PartialEq + Clone;
+    type D: Associate;
 }
 
 #[derive(Debug)]
@@ -13,10 +14,21 @@ impl Associate for Holder {
     type A = usize;
     type B = String;
     type C = u32;
+    type D = Another;
+}
+
+#[derive(Debug)]
+struct Another;
+
+impl Associate for Another {
+    type A = u32;
+    type B = String;
+    type C = u32;
+    type D = Holder;
 }
 
 #[derive(Clone, PartialEq)]
-#[bounded_to(T::B, T::C)]
+#[bounded_to(T::B, T::C, <T::D as Associate>::A)]
 struct A<T: Associate> {
     a: T::A,
     b: B<T>,
