@@ -1,13 +1,13 @@
-use derive_bounded::{Clone, PartialEq};
+use derive_bounded::{Clone, Debug, Default, PartialEq};
 
 trait Associate {
-    type A: PartialEq + Clone;
-    type B: PartialEq + Clone;
-    type C: PartialEq + Clone;
+    type A: PartialEq + Clone + std::fmt::Debug + Default;
+    type B: PartialEq + Clone + std::fmt::Debug + Default;
+    type C: PartialEq + Clone + std::fmt::Debug + Default;
     type D: Associate;
 }
 
-#[derive(Debug)]
+#[derive(std::fmt::Debug)]
 struct Holder;
 
 impl Associate for Holder {
@@ -17,7 +17,7 @@ impl Associate for Holder {
     type D = Another;
 }
 
-#[derive(Debug)]
+#[derive(std::fmt::Debug)]
 struct Another;
 
 impl Associate for Another {
@@ -57,6 +57,10 @@ where
     v: V,
     b: Blah,
 }
+
+#[derive(Clone, PartialEq, Debug, Default)]
+#[bounded_to(T::C, T::B)]
+struct D<T: Associate>(T::C, T::B);
 
 #[test]
 fn partial_eq() {

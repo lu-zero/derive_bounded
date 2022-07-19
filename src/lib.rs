@@ -94,8 +94,11 @@ fn normalize_generics<'a>(
 }
 
 struct Generator {
-    body: fn(name: &Ident, generics: Generics, inner: TokenStream2) -> TokenStream2,
-    field: fn(field: &Ident) -> TokenStream2,
+    named_body: fn(name: &Ident, generics: Generics, inner: TokenStream2) -> TokenStream2,
+    unnamed_body: fn(name: &Ident, generics: Generics, inner: TokenStream2) -> TokenStream2,
+
+    named_field: fn(field: &Ident) -> TokenStream2,
+    unnamed_field: fn(index: syn::Index) -> TokenStream2,
 }
 
 fn common_bounded(
@@ -153,19 +156,29 @@ fn common_bounded(
 
             normalize_generics(bound, &mut generics, types.iter().chain(leftovers.iter()));
 
-            let inner = match fields.style {
+            match fields.style {
                 Style::Struct => {
                     // SAFETY: Struct style struct has always fields
-                    TokenStream2::from_iter(
+                    let inner = TokenStream2::from_iter(
                         fields
                             .fields
                             .iter()
-                            .map(|f| (struct_struct.field)(f.ident.as_ref().unwrap())),
-                    )
+                            .map(|f| (struct_struct.named_field)(f.ident.as_ref().unwrap())),
+                    );
+                    (struct_struct.named_body)(&default.ident, generics, inner).into()
+                }
+                Style::Tuple => {
+                    let inner = TokenStream2::from_iter(
+                        fields
+                            .fields
+                            .iter()
+                            .enumerate()
+                            .map(|(i, _f)| (struct_struct.unnamed_field)(syn::Index::from(i))),
+                    );
+                    (struct_struct.unnamed_body)(&default.ident, generics, inner).into()
                 }
                 _ => todo!(),
-            };
-            (struct_struct.body)(&default.ident, generics, inner).into()
+            }
         }
         darling::ast::Data::Enum(ref _variants) => {
             todo!()
@@ -179,7 +192,7 @@ fn common_bounded(
 #[proc_macro_derive(Default, attributes(bounded_to))]
 pub fn default_bounded(items: TokenStream) -> TokenStream {
     let struct_struct = Generator {
-        body: |name: &Ident, generics: Generics, inner| -> TokenStream2 {
+        named_body: |name: &Ident, generics: Generics, inner| -> TokenStream2 {
             let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
             quote! {
@@ -193,12 +206,30 @@ pub fn default_bounded(items: TokenStream) -> TokenStream {
             }
         },
 
-        field: |field: &Ident| -> TokenStream2 {
-            quote! { #field: Default::default(), }
+        unnamed_body: |name: &Ident, generics: Generics, inner| -> TokenStream2 {
+            let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+            quote! {
+                impl #impl_generics std::default::Default for #name #ty_generics #where_clause {
+                    fn default() -> Self {
+                        Self(
+                            #inner
+                        )
+                    }
+                }
+            }
+        },
+
+        named_field: |field: &Ident| -> TokenStream2 {
+            quote! { #field: std::default::Default::default(), }
+        },
+
+        unnamed_field: |_index| -> TokenStream2 {
+            quote! { std::default::Default::default(), }
         },
     };
 
-    let bound = quote! { Default };
+    let bound = quote! { std::default::Default };
 
     common_bounded(items, struct_struct, bound)
 }
@@ -209,7 +240,7 @@ pub fn default_bounded(items: TokenStream) -> TokenStream {
 #[proc_macro_derive(Clone, attributes(bounded_to))]
 pub fn clone_bounded(items: TokenStream) -> TokenStream {
     let struct_struct = Generator {
-        body: |name: &Ident, generics: Generics, inner| -> TokenStream2 {
+        named_body: |name: &Ident, generics: Generics, inner| -> TokenStream2 {
             let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
             quote! {
@@ -223,12 +254,30 @@ pub fn clone_bounded(items: TokenStream) -> TokenStream {
             }
         },
 
-        field: |field: &Ident| -> TokenStream2 {
+        unnamed_body: |name: &Ident, generics: Generics, inner| -> TokenStream2 {
+            let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+            quote! {
+                impl #impl_generics std::clone::Clone for #name #ty_generics #where_clause {
+                    fn clone(&self) -> Self {
+                        Self (
+                            #inner
+                        )
+                    }
+                }
+            }
+        },
+
+        named_field: |field: &Ident| -> TokenStream2 {
             quote! { #field: self.#field.clone(), }
+        },
+
+        unnamed_field: |index| -> TokenStream2 {
+            quote! { self.#index.clone(), }
         },
     };
 
-    let bound = quote! { Clone };
+    let bound = quote! { std::clone::Clone };
 
     common_bounded(items, struct_struct, bound)
 }
@@ -239,7 +288,7 @@ pub fn clone_bounded(items: TokenStream) -> TokenStream {
 #[proc_macro_derive(Debug, attributes(bounded_to))]
 pub fn debug_bounded(items: TokenStream) -> TokenStream {
     let struct_struct = Generator {
-        body: |name: &Ident, generics: Generics, inner| -> TokenStream2 {
+        named_body: |name: &Ident, generics: Generics, inner| -> TokenStream2 {
             let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
             let s = name.to_string();
@@ -254,9 +303,28 @@ pub fn debug_bounded(items: TokenStream) -> TokenStream {
             }
         },
 
-        field: |field: &Ident| -> TokenStream2 {
+        unnamed_body: |name: &Ident, generics: Generics, inner| -> TokenStream2 {
+            let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+            let s = name.to_string();
+            quote! {
+                impl #impl_generics std::fmt::Debug for #name #ty_generics #where_clause {
+                    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        f.debug_tuple(#s)
+                        #inner
+                        .finish()
+                    }
+                }
+            }
+        },
+
+        named_field: |field: &Ident| -> TokenStream2 {
             let s = field.to_string();
             quote! { .field(#s, &self.#field) }
+        },
+
+        unnamed_field: |index| -> TokenStream2 {
+            quote! { .field(&self.#index) }
         },
     };
 
@@ -271,7 +339,7 @@ pub fn debug_bounded(items: TokenStream) -> TokenStream {
 #[proc_macro_derive(PartialEq, attributes(bounded_to))]
 pub fn partial_eq_bounded(items: TokenStream) -> TokenStream {
     let struct_struct = Generator {
-        body: |name: &Ident, generics: Generics, inner| -> TokenStream2 {
+        named_body: |name: &Ident, generics: Generics, inner| -> TokenStream2 {
             let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
             quote! {
@@ -284,12 +352,29 @@ pub fn partial_eq_bounded(items: TokenStream) -> TokenStream {
             }
         },
 
-        field: |field: &Ident| -> TokenStream2 {
+        unnamed_body: |name: &Ident, generics: Generics, inner| -> TokenStream2 {
+            let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+            quote! {
+                impl #impl_generics std::cmp::PartialEq for #name #ty_generics #where_clause {
+                    fn eq(&self, other: &Self) -> bool {
+                        true
+                        #inner
+                    }
+                }
+            }
+        },
+
+        named_field: |field: &Ident| -> TokenStream2 {
             quote! { && other.#field == self.#field }
+        },
+
+        unnamed_field: |index| -> TokenStream2 {
+            quote! { && other.#index == self.#index }
         },
     };
 
-    let bound = quote! { PartialEq };
+    let bound = quote! { std::cmp::PartialEq };
 
     common_bounded(items, struct_struct, bound)
 }
