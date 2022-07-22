@@ -35,6 +35,12 @@ struct A<T: Associate> {
 }
 
 #[derive(Clone, PartialEq)]
+#[bounded_to(T::B, T::C, <T::D as Associate>::A)]
+enum En<T: Associate> {
+    A { a: T::A, b: B<T> },
+    B(T::A, B<T>),
+}
+#[derive(Clone, PartialEq)]
 #[bounded_to(T::C)]
 struct B<T: Associate> {
     b: T::B,
