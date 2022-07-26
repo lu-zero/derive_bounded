@@ -11,16 +11,16 @@
 - [x] PartialEq
 
 ### Newtype/tuple Struct
-- [ ] Default
-- [ ] Debug
-- [ ] Clone
-- [ ] PartialEq
+- [x] Default
+- [x] Debug
+- [x] Clone
+- [x] PartialEq
 
 ### Enums
 - [ ] Default
-- [ ] Debug
-- [ ] Clone
-- [ ] PartialEq
+- [x] Debug
+- [x] Clone
+- [x] PartialEq
 
 ## Acknowledgements
 
