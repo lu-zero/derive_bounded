@@ -27,7 +27,7 @@
 //!
 //! As this version there are few known limitations:
 //!
-//! - The macro does not auto-generate the where clause for associated traits (e.g. `A` in the
+//! - The macro does not auto-generate the where clause for associated traits, e.g. `A` in the
 //! example needs the `bounded_to` attribute
 //!
 //! Later versions will address those.
