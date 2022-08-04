@@ -57,4 +57,5 @@ fn clone() {
     let d = c2.clone();
 
     dbg!(&d);
+    dbg!(&c2);
 }

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use derive_bounded::Default;
 
 trait Associate {
