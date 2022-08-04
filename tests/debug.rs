@@ -48,7 +48,7 @@ where
 
 #[derive(Clone, PartialEq, Debug)]
 #[bounded_to(T::A, T::B)]
-enum E<T: Associate, V> {
+enum E<T: Associate> {
     A,
     B(T::A, T::B),
     C { a: T::A, b: T::C },
