@@ -11,18 +11,30 @@
 - [x] Debug
 - [x] Clone
 - [x] PartialEq
+- [ ] Eq
+- [ ] PartialOrd
+- [ ] Ord
+- [ ] Hash
 
 ### Newtype/tuple Struct
 - [x] Default
 - [x] Debug
 - [x] Clone
 - [x] PartialEq
+- [ ] Eq
+- [ ] PartialOrd
+- [ ] Ord
+- [ ] Hash
 
 ### Enums
 - [ ] Default
 - [x] Debug
 - [x] Clone
 - [x] PartialEq
+- [ ] Eq
+- [ ] PartialOrd
+- [ ] Ord
+- [ ] Hash
 
 ## Acknowledgements
 
