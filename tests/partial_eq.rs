@@ -68,6 +68,14 @@ where
 #[bounded_to(T::C, T::B)]
 struct D<T: Associate>(T::C, T::B);
 
+#[derive(Clone, Debug, PartialEq, Default)]
+struct ABase<A>(A);
+
+#[derive(Clone, Debug, PartialEq, Default)]
+struct BBase<A> {
+    a: A,
+}
+
 #[test]
 fn partial_eq() {
     let c = C { c: 42 };

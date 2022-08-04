@@ -46,6 +46,9 @@ where
     b: Blah,
 }
 
+#[derive(Clone, Debug)]
+struct Struct<A>(A);
+
 #[test]
 fn clone() {
     let c2 = C2::<Holder, usize, usize> {
