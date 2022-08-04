@@ -66,3 +66,57 @@ jobs:
 
     - name: Generate docs
       run: cargo doc --no-deps
+
+  code-coverage:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Rust stable
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+
+    - name: Install grcov
+      env:
+        GRCOV_LINK: https://github.com/mozilla/grcov/releases/download
+        GRCOV_VERSION: v0.8.7
+      run: |
+        curl -L "$GRCOV_LINK/$GRCOV_VERSION/grcov-x86_64-unknown-linux-musl.tar.bz2" |
+        tar xj -C $HOME/.cargo/bin
+
+    - name: Install llvm-tools-preview
+      run: |
+        rustup component add llvm-tools-preview
+
+    # Not necessary on a newly created image, but strictly advised
+    - name: Run cargo clean
+      run: |
+        cargo clean
+
+    - name: Run tests
+      env:
+        CARGO_INCREMENTAL: 0
+        LLVM_PROFILE_FILE: "wot-td-%p-%m.profraw"
+        RUSTFLAGS: >
+          -Cinstrument-coverage -Ccodegen-units=1 -Clink-dead-code
+          -Coverflow-checks=off
+        RUSTDOCFLAGS: >
+          -Cinstrument-coverage -Ccodegen-units=1 -Clink-dead-code
+          -Coverflow-checks=off
+      run: |
+        cargo test --verbose
+
+    - name: Get coverage data
+      run: |
+        grcov . --binary-path ./target/debug/ -s . -t lcov --branch \
+              --ignore-not-existing --ignore "/*" --ignore "../*" -o lcov.info
+
+    - name: Codecov upload
+      uses: codecov/codecov-action@v3
+      with:
+        files: lcov.info
