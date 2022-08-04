@@ -12,7 +12,7 @@
 - [x] Debug
 - [x] Clone
 - [x] PartialEq
-- [ ] Eq
+- [x] Eq
 - [ ] PartialOrd
 - [ ] Ord
 - [ ] Hash
@@ -22,7 +22,7 @@
 - [x] Debug
 - [x] Clone
 - [x] PartialEq
-- [ ] Eq
+- [x] Eq
 - [ ] PartialOrd
 - [ ] Ord
 - [ ] Hash
@@ -32,7 +32,7 @@
 - [x] Debug
 - [x] Clone
 - [x] PartialEq
-- [ ] Eq
+- [x] Eq
 - [ ] PartialOrd
 - [ ] Ord
 - [ ] Hash

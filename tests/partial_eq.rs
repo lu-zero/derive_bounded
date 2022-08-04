@@ -1,9 +1,9 @@
-use derive_bounded::{Clone, Debug, Default, PartialEq};
+use derive_bounded::{Clone, Debug, Default, Eq, PartialEq};
 
 trait Associate {
-    type A: PartialEq + Clone + std::fmt::Debug + Default;
-    type B: PartialEq + Clone + std::fmt::Debug + Default;
-    type C: PartialEq + Clone + std::fmt::Debug + Default;
+    type A: PartialEq + Clone + std::fmt::Debug + Default + Eq;
+    type B: PartialEq + Clone + std::fmt::Debug + Default + Eq;
+    type C: PartialEq + Clone + std::fmt::Debug + Default + Eq;
     type D: Associate;
 }
 
@@ -27,33 +27,33 @@ impl Associate for Another {
     type D = Holder;
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 #[bounded_to(T::B, T::C, <T::D as Associate>::A)]
 struct A<T: Associate> {
     a: T::A,
     b: B<T>,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 #[bounded_to(T::B, T::C, <T::D as Associate>::A)]
 enum En<T: Associate> {
     A { a: T::A, b: B<T> },
     B(T::A, B<T>),
 }
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 #[bounded_to(T::C)]
 struct B<T: Associate> {
     b: T::B,
     c: C<T>,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq)]
 #[bounded_to(T::C)]
 struct C<T: Associate> {
     c: T::C,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq)]
 #[bounded_to(T::C)]
 struct C2<T, V, Blah: Default>
 where
@@ -64,14 +64,14 @@ where
     b: Blah,
 }
 
-#[derive(Clone, PartialEq, Debug, Default)]
+#[derive(Clone, PartialEq, Debug, Default, Eq)]
 #[bounded_to(T::C, T::B)]
 struct D<T: Associate>(T::C, T::B);
 
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq, Default, Eq)]
 struct ABase<A>(A);
 
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq, Default, Eq)]
 struct BBase<A> {
     a: A,
 }

@@ -593,3 +593,51 @@ pub fn partial_eq_bounded(items: TokenStream) -> TokenStream {
 
     common_bounded(items, struct_struct, bound)
 }
+
+/// Derive [Eq][std::cmp::Eq]
+///
+/// Use the attribute `#[bounded_to(T, A::B)] to to specify more precise bounds.
+#[proc_macro_derive(Eq, attributes(bounded_to))]
+pub fn eq_bounded(items: TokenStream) -> TokenStream {
+    let struct_struct = Generator {
+        named_body: |name: &Ident, generics: Generics, _inner| -> TokenStream2 {
+            let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+            quote! {
+                impl #impl_generics std::cmp::Eq for #name #ty_generics #where_clause {}
+            }
+        },
+
+        unnamed_body: |name: &Ident, generics: Generics, _inner| -> TokenStream2 {
+            let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+            quote! {
+                impl #impl_generics std::cmp::Eq for #name #ty_generics #where_clause {}
+            }
+        },
+
+        enum_body: |name: &Ident, generics: Generics, _inner| -> TokenStream2 {
+            let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+            quote! {
+                impl #impl_generics std::cmp::Eq for #name #ty_generics #where_clause {}
+            }
+        },
+
+        named_field: |_field: &Ident| -> TokenStream2 {
+            quote! {}
+        },
+
+        unnamed_field: |_index| -> TokenStream2 {
+            quote! {}
+        },
+
+        enum_fields: |_variant| -> TokenStream2 {
+            quote! {}
+        },
+    };
+
+    let bound = quote! { std::cmp::Eq };
+
+    common_bounded(items, struct_struct, bound)
+}
