@@ -37,12 +37,14 @@ use std::ops::Not;
 
 use darling::ast::Style;
 use proc_macro::TokenStream;
-use proc_macro2::{Span, TokenStream as TokenStream2, TokenTree};
+use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote};
+use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::token::Comma;
+use syn::token::{self, Comma};
 use syn::{
-    parse_macro_input, parse_quote, DeriveInput, Fields, Generics, Ident, PredicateType, TypePath,
+    parenthesized, parse_macro_input, parse_quote, DeriveInput, Fields, Generics, Ident,
+    PredicateType, TypePath,
 };
 
 use darling::usage::{CollectTypeParams, GenericsExt, Purpose};
@@ -56,6 +58,22 @@ struct BoundedDerive {
     data: darling::ast::Data<syn::Variant, syn::Field>,
     attrs: Vec<syn::Attribute>,
     //types: BoundedTypes,
+}
+
+struct BoundedAttr {
+    _paren_token: token::Paren,
+    types: Punctuated<syn::Type, Comma>,
+}
+
+impl Parse for BoundedAttr {
+    fn parse(input: ParseStream) -> Result<Self, syn::Error> {
+        let content;
+        let parent_token = parenthesized!(content in input);
+        Ok(BoundedAttr {
+            _paren_token: parent_token,
+            types: content.parse_terminated(syn::Type::parse)?,
+        })
+    }
 }
 
 fn normalize_generics<'a>(
@@ -161,16 +179,9 @@ fn common_bounded(items: TokenStream, generator: Generator, bound: TokenStream2)
 
     let mut types = Vec::new();
     for attr in default.attrs.iter() {
-        for token in attr.tokens.clone() {
-            if let TokenTree::Group(ref g) = token {
-                use syn::parse::Parser;
-                let parser = Punctuated::<syn::Type, Comma>::parse_terminated;
-
-                match parser.parse2(g.stream()) {
-                    Ok(l) => types.extend(l.into_iter()),
-                    Err(err) => return err.to_compile_error().into(),
-                }
-            } else {
+        match syn::parse2::<BoundedAttr>(attr.tokens.clone()) {
+            Ok(ba) => types.extend(ba.types.into_iter()),
+            Err(_) => {
                 return darling::Error::unsupported_format("expected bounded_to(...)")
                     .write_errors()
                     .into();
