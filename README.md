@@ -4,6 +4,7 @@
 [![dependency status](https://deps.rs/repo/github/lu-zero/derive_bounded/status.svg)](https://deps.rs/repo/github/lu-zero/derive_bounded)
 [![Documentation](https://docs.rs/derive_bounded/badge.svg)](https://docs.rs/derive_bounded/)
 [![Actions Status](https://github.com/lu-zero/derive_bounded/workflows/derive_bounded/badge.svg)](https://github.com/lu-zero/derive_bounded/actions)
+[![codecov](https://codecov.io/gh/lu-zero/derive_bounded/branch/master/graph/badge.svg?token=DqfW5T3Zrh)](https://codecov.io/gh/lu-zero/derive_bounded)
 
 ## Supported right now
 
